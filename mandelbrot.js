@@ -65,30 +65,54 @@ var goesToInfinity = function (complexNumber, iterations) {
       return iterate(math.add(math.pow(complexNumber, 2), c), currentIteration + 1);
     }
 
-    return {iterations: -1, minRadius: minRadius};
+    return {iterations: currentIteration, minRadius: minRadius};
   }
 
   return iterate(complexNumber, 1);
 };
 
-var colormap = {
-  '-1': [0, 0, 0],
-  0: [0, 255, 255],
-  1: [0, 255, 0],
-  2: [0, 255, 255],
-  3: [0, 0, 255]
-};
+var colormap = [];
+
+function hslToRgb(h, s, l){
+  var r, g, b;
+
+  if(s == 0){
+    r = g = b = l; // achromatic
+  }else{
+    var hue2rgb = function hue2rgb(p, q, t){
+      if(t < 0) t += 1;
+      if(t > 1) t -= 1;
+      if(t < 1/6) return p + (q - p) * 6 * t;
+      if(t < 1/2) return q;
+      if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    }
+
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    var p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+function buildColormap() {
+  var i;
+  for (i = 0; i < 100; i++) {
+    colormap.push(hslToRgb(i / 100, 1, 0.5).concat(255));
+  }
+}
+
+buildColormap();
 
 var i = 0;
-points.map(
-  function(point) {
-    var pointInfo = goesToInfinity(point, 100);
-    //return [0, 0, 255 - (pointInfo.minRadius / 2 * 255), 255];
-    //return colormap[math.floor(pointInfo.minRadius * 10) % 4].concat(255);
-    var color = colormap[pointInfo.iterations % 4];
-    return Lazy(color).map(function (component) {
-      return component - (pointInfo.minRadius / 4 * 128);
-    }).toArray().concat(255);
+var maxIterations = 1000;
+points
+  .map(function(point) {
+    var pointInfo = goesToInfinity(point, maxIterations);
+    return colormap[pointInfo.iterations % 100];
   })
   .flatten()
   .each(function (pixelComponent){
